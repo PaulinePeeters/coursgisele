@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <h1>Bienvenue, {{ full_name }}!</h1>
+    <p>Pour indiquer votre disponibilité, cliquez sur une case dans la colonne correspondant à votre date de disponibilité. Votre nom sera alors automatiquement inscrit dans la case. Vous pouvez également vous désinscrire en recliquant sur la même case.</p>
+    <table>
+        {% for row in range(5) %}
+        <tr>
+            {% for col in range(21) %}
+            {% set cell = 'cell-' + row|string + '-' + col|string %}
+            <td id="{{ cell }}"
+                {% if is_admin %} contenteditable="true" onblur="updateCell('{{ cell }}')" {% endif %}
+                {% if not is_admin and row in [1, 2] %} onclick="updateCell('{{ cell }}', '{{ full_name }}')" {% endif %}>
+                {% if table_data.get(cell) %}{{ table_data[cell] }}{% endif %}
+            </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+<script>
+    function updateCell(cellId, fullName = null) {
+        var cell = document.getElementById(cellId);
+        var row = cellId.split('-')[1];
+        var col = cellId.split('-')[2];
+        var formData = new FormData();
+        formData.append('row', row);
+        formData.append('col', col);
+
+        if (fullName) {
+            var currentName = cell.innerText.trim();
+            if (currentName === fullName) {
+                cell.innerText = '';
+                formData.append('text', '');
+            } else {
+                cell.innerText = fullName;
+                formData.append('text', fullName);
+            }
+        } else {
+            formData.append('text', cell.innerText.trim());
+        }
+
+        fetch('/table', {
+            method: 'POST',
+            body: formData
+        });
+    }
+</script>
+</body>
+</html>
