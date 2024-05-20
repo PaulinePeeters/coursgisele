@@ -1,38 +1,48 @@
 from flask import Flask, render_template, request, redirect, session
+import os
 import pymysql
 
 app = Flask(__name__)
-app.secret_key = "gisele"  # Clé secrète pour gérer la session
+app.secret_key = os.environ.get("SECRET_KEY", "gisele")  # Utilisation d'une clé secrète à partir des variables d'environnement
 
-# Configuration de la connexion MySQL
-mysql = pymysql.connect(host='ivgz2rnl5rh7sphb.chr7pe7iynqr.eu-west-1.rds.amazonaws.com',
-                        user='tgbjjonzxfewfa9e',
-                        password='sr3yvfd1cenotbvv',
-                        database='fe9dp1x6yreethbg',
-                        port=3306,
-                        cursorclass=pymysql.cursors.DictCursor)
-
+# Configuration de la connexion MySQL à partir des variables d'environnement
+db_config = {
+    'host': os.environ.get("DB_HOST", 'ivgz2rnl5rh7sphb.chr7pe7iynqr.eu-west-1.rds.amazonaws.com'),
+    'user': os.environ.get("DB_USER", 'tgbjjonzxfewfa9e'),
+    'password': os.environ.get("DB_PASSWORD", 'sr3yvfd1cenotbvv'),
+    'database': os.environ.get("DB_DATABASE", 'fe9dp1x6yreethbg'),
+    'port': int(os.environ.get("DB_PORT", 3306)),
+    'cursorclass': pymysql.cursors.DictCursor
+}
 
 # Modèle de données de la table
 class TableData:
     @staticmethod
     def fetch_all():
-        with mysql.cursor() as cursor:
-            cursor.execute("SELECT * FROM tabledata")
-            return cursor.fetchall()
+        try:
+            with pymysql.connect(**db_config) as cursor:
+                cursor.execute("SELECT * FROM tabledata")
+                return cursor.fetchall()
+        except pymysql.Error as e:
+            print("Erreur lors de la récupération des données:", e)
+            return []
 
     @staticmethod
     def merge(row, col, full_name):
-        with mysql.cursor() as cursor:
-            cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
-                           "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, full_name, full_name))
-            mysql.commit()
+        try:
+            with pymysql.connect(**db_config) as cursor:
+                cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                               "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, full_name, full_name))
+        except pymysql.Error as e:
+            print("Erreur lors de la fusion des données:", e)
 
     @staticmethod
     def delete(row, col):
-        with mysql.cursor() as cursor:
-            cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
-            mysql.commit()
+        try:
+            with pymysql.connect(**db_config) as cursor:
+                cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+        except pymysql.Error as e:
+            print("Erreur lors de la suppression des données:", e)
 
 
 # Route de la page d'accueil
@@ -51,11 +61,12 @@ def home():
 # Route de la page de la table
 @app.route("/table", methods=["GET", "POST"])
 def table():
-    if "full_name" not in session:
+    full_name = session.get("full_name")
+    if not full_name:
         return redirect("/")  # Rediriger vers la page d'accueil si l'utilisateur n'est pas connecté
-    full_name = session["full_name"]
-    is_admin = True if full_name == "Wembalola.Eleonore" else False
 
+    is_admin = full_name == "Wembalola.Eleonore"
+    
     # Récupérer les données du tableau depuis la base de données
     table_data = {}
     rows = TableData.fetch_all()
@@ -69,19 +80,16 @@ def table():
         text = request.form.get("text", "")  # Récupérer le texte du formulaire
 
         clicked_cell = f"cell-{row}-{col}"
-        if is_admin:
-            # L'admin peut écrire du texte dans toutes les cases
-            table_data[clicked_cell] = text
-            TableData.merge(row, col, text)
-        else:
-            # Pour les autres utilisateurs, gérer les clics sur les lignes 2 et 3
-            if clicked_cell in table_data:
-                if text:  # Si l'utilisateur modifie le texte, mettre à jour la ligne dans la base de données
-                    table_data[clicked_cell] = text
-                    TableData.merge(row, col, text)
-                else:  # Sinon, supprimer la ligne de la base de données
+        if is_admin or clicked_cell in table_data:
+            try:
+                TableData.merge(row, col, text)
+                if not text:
                     del table_data[clicked_cell]
                     TableData.delete(row, col)
+                else:
+                    table_data[clicked_cell] = text
+            except pymysql.Error as e:
+                print("Erreur lors de la mise à jour des données:", e)
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
 
