@@ -1,21 +1,39 @@
 from flask import Flask, render_template, request, redirect, session
-from flask_sqlalchemy import SQLAlchemy
+import pymysql
 
 app = Flask(__name__)
 app.secret_key = "gisele"  # Clé secrète pour gérer la session
 
-# Configuration de la base de données
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://tgbjjonzxfewfa9e:sr3yvfd1cenotbvv@ivgz2rnl5rh7sphb.chr7pe7iynqr.eu-west-1.rds.amazonaws.com:3306/fe9dp1x6yreethbg'
-db = SQLAlchemy(app)
+# Configuration de la connexion MySQL
+mysql = pymysql.connect(host='ivgz2rnl5rh7sphb.chr7pe7iynqr.eu-west-1.rds.amazonaws.com',
+                        user='tgbjjonzxfewfa9e',
+                        password='sr3yvfd1cenotbvv',
+                        database='fe9dp1x6yreethbg',
+                        port=3306,
+                        cursorclass=pymysql.cursors.DictCursor)
+
 
 # Modèle de données de la table
-class TableData(db.Model):
-    row = db.Column(db.String(50), primary_key=True)
-    col = db.Column(db.String(50), primary_key=True)
-    full_name = db.Column(db.String(255))
-    
-    def __repr__(self):
-        return f"TableData(row={self.row}, col={self.col}, full_name={self.full_name})"
+class TableData:
+    @staticmethod
+    def fetch_all():
+        with mysql.cursor() as cursor:
+            cursor.execute("SELECT * FROM tabledata")
+            return cursor.fetchall()
+
+    @staticmethod
+    def merge(row, col, full_name):
+        with mysql.cursor() as cursor:
+            cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                           "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, full_name, full_name))
+            mysql.commit()
+
+    @staticmethod
+    def delete(row, col):
+        with mysql.cursor() as cursor:
+            cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+            mysql.commit()
+
 
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
@@ -29,6 +47,7 @@ def home():
             return "Nom d'utilisateur incorrect. Veuillez réessayer."
     return render_template("accueil.html")
 
+
 # Route de la page de la table
 @app.route("/table", methods=["GET", "POST"])
 def table():
@@ -39,9 +58,9 @@ def table():
 
     # Récupérer les données du tableau depuis la base de données
     table_data = {}
-    rows = TableData.query.all()
+    rows = TableData.fetch_all()
     for row in rows:
-        table_data[f"cell-{row.row}-{row.col}"] = row.full_name
+        table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
 
     # Traitement des modifications dans les cellules
     if request.method == "POST":
@@ -53,19 +72,16 @@ def table():
         if is_admin:
             # L'admin peut écrire du texte dans toutes les cases
             table_data[clicked_cell] = text
-            new_data = TableData(row=row, col=col, full_name=text)
-            db.session.merge(new_data)
+            TableData.merge(row, col, text)
         else:
             # Pour les autres utilisateurs, gérer les clics sur les lignes 2 et 3
-            current_data = TableData.query.filter_by(row=row, col=col).first()
-            if current_data and current_data.full_name == full_name:
+            if clicked_cell in table_data:
                 if text:  # Si l'utilisateur modifie le texte, mettre à jour la ligne dans la base de données
-                    current_data.full_name = text
-                    db.session.commit()
+                    table_data[clicked_cell] = text
+                    TableData.merge(row, col, text)
                 else:  # Sinon, supprimer la ligne de la base de données
-                    db.session.delete(current_data)
-                    table_data.pop(clicked_cell)
-        db.session.commit()
+                    del table_data[clicked_cell]
+                    TableData.delete(row, col)
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
 
