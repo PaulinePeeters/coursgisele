@@ -3,7 +3,7 @@ import os
 import pymysql
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "gisele")  # Utilisation d'une clé secrète à partir des variables d'environnement
+app.secret_key = os.environ.get("SECRET_KEY", "gisele") 
 
 # Configuration de la connexion MySQL à partir des variables d'environnement
 db_config = {
@@ -15,14 +15,16 @@ db_config = {
     'cursorclass': pymysql.cursors.DictCursor
 }
 
+
 # Modèle de données de la table
 class TableData:
     @staticmethod
     def fetch_all():
         try:
-            with pymysql.connect(**db_config) as cursor:
-                cursor.execute("SELECT * FROM tabledata")
-                return cursor.fetchall()
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT * FROM tabledata")
+                    return cursor.fetchall()
         except pymysql.Error as e:
             print("Erreur lors de la récupération des données:", e)
             return []
@@ -30,17 +32,19 @@ class TableData:
     @staticmethod
     def merge(row, col, full_name):
         try:
-            with pymysql.connect(**db_config) as cursor:
-                cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
-                               "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, full_name, full_name))
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                                   "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, full_name, full_name))
         except pymysql.Error as e:
             print("Erreur lors de la fusion des données:", e)
 
     @staticmethod
     def delete(row, col):
         try:
-            with pymysql.connect(**db_config) as cursor:
-                cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
         except pymysql.Error as e:
             print("Erreur lors de la suppression des données:", e)
 
@@ -63,31 +67,37 @@ def home():
 def table():
     full_name = session.get("full_name")
     if not full_name:
-        return redirect("/")  # Rediriger vers la page d'accueil si l'utilisateur n'est pas connecté
+        return redirect("/")  
 
     is_admin = full_name == "Wembalola.Eleonore"
-    
+
     # Récupérer les données du tableau depuis la base de données
     table_data = {}
-    rows = TableData.fetch_all()
-    for row in rows:
-        table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
+    try:
+        with pymysql.connect(**db_config) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM tabledata")
+                rows = cursor.fetchall()
+                for row in rows:
+                    table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
+    except pymysql.Error as e:
+        print("Erreur lors de la récupération des données:", e)
 
     # Traitement des modifications dans les cellules
     if request.method == "POST":
         row = request.form["row"]
         col = request.form["col"]
-        text = request.form.get("text", "")  # Récupérer le texte du formulaire
+        text = request.form.get("text", "")  
 
         clicked_cell = f"cell-{row}-{col}"
         if is_admin or clicked_cell in table_data:
             try:
-                TableData.merge(row, col, text)
+                with pymysql.connect(**db_config) as conn:
+                    with conn.cursor() as cursor:
+                        cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                                       "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, text, text))
                 if not text:
                     del table_data[clicked_cell]
-                    TableData.delete(row, col)
-                else:
-                    table_data[clicked_cell] = text
             except pymysql.Error as e:
                 print("Erreur lors de la mise à jour des données:", e)
 
