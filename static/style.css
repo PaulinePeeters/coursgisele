@@ -12,11 +12,19 @@ body {
     height: 100vh;
     flex-direction: column;
 }
-/* Container for the table */
+
 .container {
     text-align: center;
     width: auto;
+    max-width: 1200px;
     margin: 20px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* Container for the table */
+.table-container {
     overflow-x: auto;
 }
 
@@ -60,7 +68,7 @@ input[type="submit"]:hover {
 table {
     border-collapse: collapse;
     margin: 20px auto;
-    width: 90%;
+    width: 100%;
 }
 
 td {
@@ -79,6 +87,7 @@ td:hover {
 
 td[contenteditable="true"] {
     background-color: #fffcf2;
+    cursor: text;
 }
 
 td[contenteditable="true"]:focus {
