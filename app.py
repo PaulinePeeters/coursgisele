@@ -42,6 +42,16 @@ class TableData:
         except pymysql.Error as e:
             print("Erreur lors de la fusion des données:", e)
 
+    @staticmethod
+    def delete(row, col):
+        try:
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("DELETE FROM tabledata WHERE row_num=%s AND col_num=%s", (row, col))
+                conn.commit()  # Ensure changes are committed
+        except pymysql.Error as e:
+            print("Erreur lors de la suppression des données:", e)
+
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -82,8 +92,12 @@ def table():
 
         try:
             if full_name == "Wembalola.Eleonore" or (int(row) in [1, 2] and not table_data.get(clicked_cell)):
-                TableData.merge(row, col, full_name)
-                table_data[clicked_cell] = full_name if table_data.get(clicked_cell) != full_name else None
+                if table_data.get(clicked_cell) != full_name:
+                    TableData.merge(row, col, full_name)
+                    table_data[clicked_cell] = full_name
+                else:
+                    TableData.delete(row, col)
+                    table_data[clicked_cell] = None
         except pymysql.Error as e:
             print("Erreur lors de la mise à jour des données:", e)
 
