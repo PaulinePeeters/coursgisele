@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Accueil</title>
     <link rel="stylesheet" href="{{ url_for('static', filename= 'style.css') }}">
 </head>
 <body>
     <div class = "login-container">
-<form action="/" method="POST">
-    <label for="full_name">Nom d'utilisateur (Nom.Prénom):</label><br>
-    <input type="text" id="full_name" name="full_name" required><br>
-    <input type="submit" value="Envoyer">
+<form action="/" method="POST" class="form-login">
+    <h2> Nom d'utilisateur :</h2>
+    <label for="login-input-user" class="login__label"> Nom.Prenom </label>
+    <input type="text" id="full_name" name="full_name" required class="login__input" ><br>
+    <button class="login__submit"  type="submit" value="Envoyer"></button>
+    <label for="login-input-user" class="login__label">
+		<strong>Note :</strong> Si votre nom ou prénom est composé de deux mots, veuillez les coller en 
+        les commençant par une majuscule. Ne pas mettre d'accent.
+	</label>
 </form>
     </div>
 </body>
