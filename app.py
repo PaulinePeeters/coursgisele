@@ -67,44 +67,32 @@ def home():
 # Route de la page de la table
 @app.route("/table", methods=["GET", "POST"])
 def table():
-    full_name = session.get("full_name")
-    if not full_name:
+    if "full_name" not in session:
         return redirect("/")
-
+    full_name = session["full_name"]
     is_admin = full_name == "Wembalola.Eleonore"
+    cursor = get_cursor()
 
-    # Récupérer les données du tableau depuis la base de données
+    cursor.execute("SELECT row_num, col_num, full_name FROM tabledata")
+    rows = cursor.fetchall()
     table_data = {}
-    try:
-        with pymysql.connect(**db_config) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT * FROM tabledata")
-                rows = cursor.fetchall()
-                for row in rows:
-                    table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
-    except pymysql.Error as e:
-        print("Erreur lors de la récupération des données:", e)
+    if rows:
+        table_data = {f"cell-{row['row_num']}-{row['col_num']}": row['full_name'] for row in rows}
 
-    # Traitement des modifications dans les cellules
     if request.method == "POST":
         row = request.form["row"]
         col = request.form["col"]
-        text = request.form.get("text", "")
-
+        new_value = request.form["value"]
         clicked_cell = f"cell-{row}-{col}"
-        if is_admin or clicked_cell in table_data:
-            try:
-                if text:
-                    TableData.merge(row, col, text)
-                    table_data[clicked_cell] = text
-                else:
-                    TableData.delete(row, col)
-                    table_data.pop(clicked_cell, None)
-            except pymysql.Error as e:
-                print("Erreur lors de la mise à jour des données:", e)
+        table_data[clicked_cell] = new_value
+
+        cursor.execute("DELETE FROM tabledata WHERE row_num = %s AND col_num = %s", (row, col))
+        if new_value:
+            cursor.execute("INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s)",
+                           (row, col, new_value))
+        db.commit()
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
-
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
