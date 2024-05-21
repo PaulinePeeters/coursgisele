@@ -81,8 +81,9 @@ def table():
         clicked_cell = f"cell-{row}-{col}"
 
         try:
-            TableData.merge(row, col, full_name)
-            table_data[clicked_cell] = full_name if table_data.get(clicked_cell) != full_name else None
+            if full_name == "Wembalola.Eleonore" or (int(row) in [1, 2] and not table_data.get(clicked_cell)):
+                TableData.merge(row, col, full_name)
+                table_data[clicked_cell] = full_name if table_data.get(clicked_cell) != full_name else None
         except pymysql.Error as e:
             print("Erreur lors de la mise à jour des données:", e)
 
