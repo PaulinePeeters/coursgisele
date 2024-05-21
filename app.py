@@ -15,54 +15,95 @@ db_config = {
     'cursorclass': pymysql.cursors.DictCursor
 }
 
+# Modèle de données de la table
+class TableData:
+    @staticmethod
+    def fetch_all():
+        try:
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT * FROM tabledata")
+                    return cursor.fetchall()
+        except pymysql.Error as e:
+            print("Erreur lors de la récupération des données:", e)
+            return []
+
+    @staticmethod
+    def merge(row, col, full_name):
+        try:
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                        "ON DUPLICATE KEY UPDATE full_name=%s",
+                        (row, col, full_name, full_name)
+                    )
+                conn.commit()  # Ensure changes are committed
+        except pymysql.Error as e:
+            print("Erreur lors de la fusion des données:", e)
+
+    @staticmethod
+    def delete(row, col):
+        try:
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+                conn.commit()  # Ensure changes are committed
+        except pymysql.Error as e:
+            print("Erreur lors de la suppression des données:", e)
+
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
         full_name = request.form["full_name"]
-        cursor = get_cursor()
-        cursor.execute("SELECT full_name FROM utilisateurs WHERE full_name = %s", (full_name,))
-        result = cursor.fetchone()
-        if result:
+        if full_name:
             session["full_name"] = full_name
             return redirect("/table")
         else:
             return "Nom d'utilisateur incorrect. Veuillez réessayer."
     return render_template("accueil.html")
 
+# Route de la page de la table
 @app.route("/table", methods=["GET", "POST"])
 def table():
-    if "full_name" not in session:
+    full_name = session.get("full_name")
+    if not full_name:
         return redirect("/")
-    full_name = session["full_name"]
+
     is_admin = full_name == "Wembalola.Eleonore"
-    cursor = get_cursor()
 
-    cursor.execute("SELECT row_num, col_num, full_name FROM tabledata")
-    rows = cursor.fetchall()
+    # Récupérer les données du tableau depuis la base de données
     table_data = {}
-    if rows:
-        table_data = {f"cell-{row['row_num']}-{row['col_num']}": row['full_name'] for row in rows}
+    try:
+        with pymysql.connect(**db_config) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM tabledata")
+                rows = cursor.fetchall()
+                for row in rows:
+                    table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
+    except pymysql.Error as e:
+        print("Erreur lors de la récupération des données:", e)
 
+    # Traitement des modifications dans les cellules
     if request.method == "POST":
-        row = int(request.form["row"])
-        col = int(request.form["col"])
-        new_value = request.form["value"]
-        clicked_cell = f"cell-{row}-{col}"
-        table_data[clicked_cell] = new_value
+        row = request.form["row"]
+        col = request.form["col"]
+        text = request.form.get("text", "")
 
-        cursor.execute("DELETE FROM tabledata WHERE row_num = %s AND col_num = %s", (row, col))
-        if new_value:
-            cursor.execute("INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s)",
-                           (row, col, new_value))
-        db.commit()
+        clicked_cell = f"cell-{row}-{col}"
+        if is_admin or clicked_cell in table_data:
+            try:
+                if text:
+                    TableData.merge(row, col, text)
+                    table_data[clicked_cell] = text
+                else:
+                    TableData.delete(row, col)
+                    table_data.pop(clicked_cell, None)
+            except pymysql.Error as e:
+                print("Erreur lors de la mise à jour des données:", e)
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
-
-
-def get_cursor():
-    connection = pymysql.connect(**db_config)
-    return connection.cursor()
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
