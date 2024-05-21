@@ -34,7 +34,7 @@ class TableData:
             with pymysql.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                        "INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s) "
                         "ON DUPLICATE KEY UPDATE full_name=%s",
                         (row, col, full_name, full_name)
                     )
@@ -47,7 +47,7 @@ class TableData:
         try:
             with pymysql.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+                    cursor.execute("DELETE FROM tabledata WHERE row_num=%s AND col_num=%s", (row, col))
                 conn.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la suppression des données:", e)
@@ -81,7 +81,8 @@ def table():
                 cursor.execute("SELECT * FROM tabledata")
                 rows = cursor.fetchall()
                 for row in rows:
-                    table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
+                    cell_key = f"cell-{row['row_num']}-{row['col_num']}"
+                    table_data[cell_key] = row['full_name']
     except pymysql.Error as e:
         print("Erreur lors de la récupération des données:", e)
 
