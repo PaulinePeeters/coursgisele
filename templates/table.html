@@ -17,42 +17,35 @@
             {% set cell = 'cell-' + row|string + '-' + col|string %}
             <td id="{{ cell }}"
                 {% if is_admin %} contenteditable="true" onblur="updateCell('{{ cell }}')" {% endif %}
-                {% if not is_admin and row in [1, 2] %} onclick="updateUserCell('{{ cell }}')" {% endif %}>
+                {% if not is_admin and row in [1, 2] %} onclick="updateCell('{{ cell }}', '{{ full_name }}')" {% endif %}>
                 {% if table_data.get(cell) %}{{ table_data[cell] }}{% endif %}
             </td>
             {% endfor %}
         </tr>
         {% endfor %}
     </table>
-    <!-- Ajoutez une liste déroulante pour afficher tous les utilisateurs -->
-    <select id="users" {% if not is_admin %} style="display: none;" {% endif %}>
-        <option value="">Sélectionner un utilisateur</option>
-        {% for utilisateur in utilisateurs %}
-        <option value="{{ utilisateur['id'] }}">{{ utilisateur['full_name'] }}</option>
-        {% endfor %}
-    </select>
 </div>
 <script>
-    // Fonction pour mettre à jour une cellule avec le nom d'utilisateur sélectionné
-    function updateUserCell(cellId) {
-        var cell = document.getElementById(cellId);
-        var userSelect = document.getElementById("users");
-        var selectedUserId = userSelect.value;
-
-        if (selectedUserId) {
-            updateCell(cellId, selectedUserId); // Envoyer l'ID de l'utilisateur sélectionné
-        }
-    }
-
-    // Fonction pour mettre à jour les données dans la base de données via une requête AJAX
-    function updateCell(cellId, userId) {
+    function updateCell(cellId, fullName = null) {
         var cell = document.getElementById(cellId);
         var row = cellId.split('-')[1];
         var col = cellId.split('-')[2];
         var formData = new FormData();
         formData.append('row', row);
         formData.append('col', col);
-        formData.append('user_id', userId); // Envoyer l'ID de l'utilisateur
+
+        if (fullName) {
+            var currentName = cell.innerText.trim();
+            if (currentName === fullName) {
+                cell.innerText = '';
+                formData.append('text', '');
+            } else {
+                cell.innerText = fullName;
+                formData.append('text', fullName);
+            }
+        } else {
+            formData.append('text', cell.innerText.trim());
+        }
 
         fetch('/table', {
             method: 'POST',
