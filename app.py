@@ -35,22 +35,12 @@ class TableData:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         "INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s) "
-                        "ON DUPLICATE KEY UPDATE full_name=%s",
-                        (row, col, full_name, full_name)
+                        "ON DUPLICATE KEY UPDATE full_name=IF(full_name=%s, NULL, %s)",
+                        (row, col, full_name, full_name, full_name)
                     )
                 conn.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la fusion des données:", e)
-
-    @staticmethod
-    def delete(row, col):
-        try:
-            with pymysql.connect(**db_config) as conn:
-                with conn.cursor() as cursor:
-                    cursor.execute("DELETE FROM tabledata WHERE row_num=%s AND col_num=%s", (row, col))
-                conn.commit()  # Ensure changes are committed
-        except pymysql.Error as e:
-            print("Erreur lors de la suppression des données:", e)
 
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
@@ -71,8 +61,6 @@ def table():
     if not full_name:
         return redirect("/")
 
-    is_admin = full_name == "Wembalola.Eleonore"
-
     # Récupérer les données du tableau depuis la base de données
     table_data = {}
     try:
@@ -90,21 +78,15 @@ def table():
     if request.method == "POST":
         row = request.form["row"]
         col = request.form["col"]
-        text = request.form.get("text", "")
-
         clicked_cell = f"cell-{row}-{col}"
-        if is_admin or clicked_cell in table_data:
-            try:
-                if text:
-                    TableData.merge(row, col, text)
-                    table_data[clicked_cell] = text
-                else:
-                    TableData.delete(row, col)
-                    table_data.pop(clicked_cell, None)
-            except pymysql.Error as e:
-                print("Erreur lors de la mise à jour des données:", e)
 
-    return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
+        try:
+            TableData.merge(row, col, full_name)
+            table_data[clicked_cell] = full_name if table_data.get(clicked_cell) != full_name else None
+        except pymysql.Error as e:
+            print("Erreur lors de la mise à jour des données:", e)
+
+    return render_template("table.html", full_name=full_name, table_data=table_data)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
