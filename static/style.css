@@ -35,7 +35,7 @@ body {
         padding: 5rem 4rem 0 4rem;
 	width: 100%;
 	max-width: 525px;
-	min-height: 400px;
+	min-height: 300px;
 	background-color: #ECEFF0;
 	box-shadow: 0 50px 70px -20px rgba(0, 0, 0, 0.85);
 }
@@ -58,13 +58,12 @@ body {
 }
 
 .form-login {
-	position: relative;
-	z-index: 1;
+    position: relative;
+    z-index: 1;
     padding-bottom: 4.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.25);
     display: flex;
     flex-direction: column;
-    align-items: center;
 }
 .login__label {
 	display: block;
