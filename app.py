@@ -86,7 +86,7 @@ def table():
         except pymysql.Error as e:
             print("Erreur lors de la mise à jour des données:", e)
 
-    return render_template("table.html", full_name=full_name, table_data=table_data)
+    return render_template("table.html", full_name=full_name, is_admin=(full_name == "Wembalola.Eleonore"), table_data=table_data)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
