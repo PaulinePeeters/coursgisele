@@ -51,6 +51,12 @@ class TableData:
                 conn.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la suppression des données:", e)
+            
+# Définir la fonction pour obtenir un curseur
+def get_cursor():
+    connection = pymysql.connect(**db_config)
+    return connection.cursor()
+
 
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
