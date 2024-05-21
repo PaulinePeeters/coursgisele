@@ -4,7 +4,7 @@
 /* Global styles */
 body {
     font-family: Arial, sans-serif;
-    background-color: #f8f9fa;
+    background-color: #05699B;
     margin: 0;
     padding: 0;
     display: flex;
@@ -12,10 +12,6 @@ body {
     align-items: center;
     height: 100vh;
     flex-direction: column;
-}
-
-.login-container{
-    background-color : red;
 }
 .container {
     text-align: center;
