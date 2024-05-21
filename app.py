@@ -80,7 +80,7 @@ def table():
         text = request.form.get("text", "")
 
         clicked_cell = f"cell-{row}-{col}"
-        if (is_admin or clicked_cell in table_data) or (not is_admin and int(row) <= 2 and not any(f"cell-{row}-{i}" in table_data for i in range(21))):
+        if is_admin or clicked_cell in table_data or (not is_admin and int(row) <= 2):
             try:
                 if text:
                     TableData.merge(row, col, text)
