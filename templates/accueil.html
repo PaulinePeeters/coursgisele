@@ -7,10 +7,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename= 'style.css') }}">
 </head>
 <body>
+    <div class = "login-container">
 <form action="/" method="POST">
     <label for="full_name">Nom d'utilisateur (Nom.Prénom):</label><br>
     <input type="text" id="full_name" name="full_name" required><br>
     <input type="submit" value="Envoyer">
 </form>
+    </div>
 </body>
 </html>
