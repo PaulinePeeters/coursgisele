@@ -1,3 +1,4 @@
+
 /* styles.css */
 
 /* Global styles */
@@ -13,6 +14,9 @@ body {
     flex-direction: column;
 }
 
+.login-container{
+    background-color : red;
+}
 .container {
     text-align: center;
     width: auto;
