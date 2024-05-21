@@ -10,20 +10,22 @@
 <div class="container">
     <h1>Bienvenue, {{ full_name }}!</h1>
     <p>Pour indiquer votre disponibilité, cliquez sur une case dans la colonne correspondant à votre date de disponibilité. Votre nom sera alors automatiquement inscrit dans la case. Vous pouvez également vous désinscrire en recliquant sur la même case.</p>
-    <table>
-        {% for row in range(5) %}
-        <tr>
-            {% for col in range(14) %}
-            {% set cell = 'cell-' + row|string + '-' + col|string %}
-            <td id="{{ cell }}"
-                {% if is_admin %} contenteditable="true" onblur="updateCell('{{ cell }}')" {% endif %}
-                {% if not is_admin and row in [1, 2] %} onclick="updateCell('{{ cell }}', '{{ full_name }}')" {% endif %}>
-                {% if table_data.get(cell) %}{{ table_data[cell] }}{% endif %}
-            </td>
+    <div class="table-container">
+        <table>
+            {% for row in range(5) %}
+            <tr>
+                {% for col in range(14) %}
+                {% set cell = 'cell-' + row|string + '-' + col|string %}
+                <td id="{{ cell }}"
+                    {% if is_admin %} contenteditable="true" onblur="updateCell('{{ cell }}')" {% endif %}
+                    {% if not is_admin and row in [1, 2] %} onclick="updateCell('{{ cell }}', '{{ full_name }}')" {% endif %}>
+                    {% if table_data.get(cell) %}{{ table_data[cell] }}{% endif %}
+                </td>
+                {% endfor %}
+            </tr>
             {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
+        </table>
+    </div>
 </div>
 <script>
     function updateCell(cellId, fullName = null) {
