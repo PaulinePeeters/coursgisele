@@ -18,9 +18,9 @@ db_config = {
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
 def home():
-    cursor = db.cursor()
     if request.method == "POST":
         full_name = request.form["full_name"]
+        cursor = get_cursor()
         cursor.execute("SELECT full_name FROM utilisateurs WHERE full_name = %s", (full_name,))
         result = cursor.fetchone()
         if result:
@@ -37,7 +37,7 @@ def table():
         return redirect("/")
     full_name = session["full_name"]
     is_admin = full_name == "Wembalola.Eleonore"
-    cursor = db.cursor()
+    cursor = get_cursor()
 
     cursor.execute("SELECT row_num, col_num, full_name FROM table_data")
     rows = cursor.fetchall()
@@ -57,6 +57,10 @@ def table():
         db.commit()
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
+
+def get_cursor():
+    connection = pymysql.connect(**db_config)
+    return connection.cursor()
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
