@@ -13,7 +13,7 @@
     <table>
         {% for row in range(5) %}
         <tr>
-            {% for col in range(21) %}
+            {% for col in range(14) %}
             {% set cell = 'cell-' + row|string + '-' + col|string %}
             <td id="{{ cell }}"
                 {% if is_admin %} contenteditable="true" onblur="updateCell('{{ cell }}')" {% endif %}
