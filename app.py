@@ -30,7 +30,6 @@ def home():
             return "Nom d'utilisateur incorrect. Veuillez réessayer."
     return render_template("accueil.html")
 
-# Route de la page de la table
 @app.route("/table", methods=["GET", "POST"])
 def table():
     if "full_name" not in session:
@@ -41,7 +40,9 @@ def table():
 
     cursor.execute("SELECT row_num, col_num, full_name FROM tabledata")
     rows = cursor.fetchall()
-    table_data = {f"cell-{row[0]}-{row[1]}": row[2] for row in rows}
+    table_data = {}
+    if rows:
+        table_data = {f"cell-{row['row_num']}-{row['col_num']}": row['full_name'] for row in rows}
 
     if request.method == "POST":
         row = int(request.form["row"])
@@ -57,6 +58,7 @@ def table():
         db.commit()
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
+
 
 def get_cursor():
     connection = pymysql.connect(**db_config)
