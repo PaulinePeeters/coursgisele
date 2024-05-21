@@ -18,16 +18,6 @@ db_config = {
 # Modèle de données de la table
 class TableData:
     @staticmethod
-    def fetch_all():
-        try:
-            with get_cursor() as cursor:
-                cursor.execute("SELECT * FROM tabledata")
-                return cursor.fetchall()
-        except pymysql.Error as e:
-            print("Erreur lors de la récupération des données:", e)
-            return []
-
-    @staticmethod
     def merge(row, col, full_name):
         try:
             with get_cursor() as cursor:
@@ -36,7 +26,8 @@ class TableData:
                     "ON DUPLICATE KEY UPDATE full_name=%s",
                     (row, col, full_name, full_name)
                 )
-                db.commit()  # Ensure changes are committed
+            # Appeler commit sur la connexion (g.db) après l'exécution de la requête
+            g.db.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la fusion des données:", e)
 
@@ -45,9 +36,11 @@ class TableData:
         try:
             with get_cursor() as cursor:
                 cursor.execute("DELETE FROM tabledata WHERE row_num=%s AND col_num=%s", (row, col))
-                db.commit()  # Ensure changes are committed
+            # Appeler commit sur la connexion (g.db) après l'exécution de la requête
+            g.db.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la suppression des données:", e)
+
 
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
