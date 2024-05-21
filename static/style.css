@@ -140,7 +140,6 @@ td:hover {
 }
 
 td[contenteditable="true"] {
-    background-color: #fffcf2;
     cursor: text;
 }
 
