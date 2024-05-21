@@ -34,7 +34,7 @@ class TableData:
             with pymysql.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                        "INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s) "
                         "ON DUPLICATE KEY UPDATE full_name=%s",
                         (row, col, full_name, full_name)
                     )
@@ -47,10 +47,23 @@ class TableData:
         try:
             with pymysql.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+                    cursor.execute("DELETE FROM tabledata WHERE row_num=%s AND col_num=%s", (row, col))
                 conn.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la suppression des données:", e)
+
+# Modèle pour la table 'utilisateurs'
+class Utilisateur:
+    @staticmethod
+    def fetch_all():
+        try:
+            with pymysql.connect(**db_config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT * FROM utilisateurs")
+                    return cursor.fetchall()
+        except pymysql.Error as e:
+            print("Erreur lors de la récupération des utilisateurs:", e)
+            return []
 
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
@@ -81,9 +94,12 @@ def table():
                 cursor.execute("SELECT * FROM tabledata")
                 rows = cursor.fetchall()
                 for row in rows:
-                    table_data[f"cell-{row['row']}-{row['col']}"] = row['full_name']
+                    table_data[f"cell-{row['row_num']}-{row['col_num']}"] = row['full_name']
     except pymysql.Error as e:
         print("Erreur lors de la récupération des données:", e)
+
+    # Récupérer tous les utilisateurs
+    utilisateurs = Utilisateur.fetch_all()
 
     # Traitement des modifications dans les cellules
     if request.method == "POST":
@@ -95,7 +111,8 @@ def table():
         if is_admin or clicked_cell in table_data:
             try:
                 if text:
-                    TableData.merge(row, col, text)
+                    utilisateur_id = request.form.get("user_id", None)
+                    TableData.merge(row, col, utilisateur_id)
                     table_data[clicked_cell] = text
                 else:
                     TableData.delete(row, col)
@@ -103,7 +120,7 @@ def table():
             except pymysql.Error as e:
                 print("Erreur lors de la mise à jour des données:", e)
 
-    return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
+    return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data, utilisateurs=utilisateurs)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
