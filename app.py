@@ -35,7 +35,7 @@ class TableData:
                 with conn.cursor() as cursor:
                     cursor.execute(
                         "INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s) "
-                        "ON DUPLICATE KEY UPDATE full_name=IF(full_name=%s, VALUES(full_name), full_name)",
+                        "ON DUPLICATE KEY UPDATE full_name=IF(full_name=%s, full_name, VALUES(full_name))",
                         (row, col, full_name, full_name)
                     )
                 conn.commit()  # Ensure changes are committed
