@@ -39,7 +39,7 @@ def table():
     is_admin = full_name == "Wembalola.Eleonore"
     cursor = get_cursor()
 
-    cursor.execute("SELECT row_num, col_num, full_name FROM table_data")
+    cursor.execute("SELECT row_num, col_num, full_name FROM tabledata")
     rows = cursor.fetchall()
     table_data = {f"cell-{row[0]}-{row[1]}": row[2] for row in rows}
 
@@ -50,9 +50,9 @@ def table():
         clicked_cell = f"cell-{row}-{col}"
         table_data[clicked_cell] = new_value
 
-        cursor.execute("DELETE FROM table_data WHERE row_num = %s AND col_num = %s", (row, col))
+        cursor.execute("DELETE FROM tabledata WHERE row_num = %s AND col_num = %s", (row, col))
         if new_value:
-            cursor.execute("INSERT INTO table_data (row_num, col_num, full_name) VALUES (%s, %s, %s)",
+            cursor.execute("INSERT INTO tabledata (row_num, col_num, full_name) VALUES (%s, %s, %s)",
                            (row, col, new_value))
         db.commit()
 
