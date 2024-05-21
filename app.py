@@ -3,7 +3,7 @@ import os
 import pymysql
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "gisele") 
+app.secret_key = os.environ.get("SECRET_KEY", "gisele")
 
 # Configuration de la connexion MySQL à partir des variables d'environnement
 db_config = {
@@ -14,7 +14,6 @@ db_config = {
     'port': int(os.environ.get("DB_PORT", 3306)),
     'cursorclass': pymysql.cursors.DictCursor
 }
-
 
 # Modèle de données de la table
 class TableData:
@@ -34,8 +33,12 @@ class TableData:
         try:
             with pymysql.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
-                    cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
-                                   "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, full_name, full_name))
+                    cursor.execute(
+                        "INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
+                        "ON DUPLICATE KEY UPDATE full_name=%s",
+                        (row, col, full_name, full_name)
+                    )
+                conn.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la fusion des données:", e)
 
@@ -45,9 +48,9 @@ class TableData:
             with pymysql.connect(**db_config) as conn:
                 with conn.cursor() as cursor:
                     cursor.execute("DELETE FROM tabledata WHERE row=%s AND col=%s", (row, col))
+                conn.commit()  # Ensure changes are committed
         except pymysql.Error as e:
             print("Erreur lors de la suppression des données:", e)
-
 
 # Route de la page d'accueil
 @app.route("/", methods=["GET", "POST"])
@@ -61,13 +64,12 @@ def home():
             return "Nom d'utilisateur incorrect. Veuillez réessayer."
     return render_template("accueil.html")
 
-
 # Route de la page de la table
 @app.route("/table", methods=["GET", "POST"])
 def table():
     full_name = session.get("full_name")
     if not full_name:
-        return redirect("/")  
+        return redirect("/")
 
     is_admin = full_name == "Wembalola.Eleonore"
 
@@ -87,22 +89,21 @@ def table():
     if request.method == "POST":
         row = request.form["row"]
         col = request.form["col"]
-        text = request.form.get("text", "")  
+        text = request.form.get("text", "")
 
         clicked_cell = f"cell-{row}-{col}"
         if is_admin or clicked_cell in table_data:
             try:
-                with pymysql.connect(**db_config) as conn:
-                    with conn.cursor() as cursor:
-                        cursor.execute("INSERT INTO tabledata (row, col, full_name) VALUES (%s, %s, %s) "
-                                       "ON DUPLICATE KEY UPDATE full_name=%s", (row, col, text, text))
-                if not text:
-                    del table_data[clicked_cell]
+                if text:
+                    TableData.merge(row, col, text)
+                    table_data[clicked_cell] = text
+                else:
+                    TableData.delete(row, col)
+                    table_data.pop(clicked_cell, None)
             except pymysql.Error as e:
                 print("Erreur lors de la mise à jour des données:", e)
 
     return render_template("table.html", full_name=full_name, is_admin=is_admin, table_data=table_data)
-
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
